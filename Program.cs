@@ -41,10 +41,9 @@ builder.Services.AddAuthentication(options =>
         ValidIssuer              = builder.Configuration["Jwt:Issuer"],
         ValidAudience            = builder.Configuration["Jwt:Audience"],
         IssuerSigningKey         = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey)),
-        ClockSkew                = TimeSpan.Zero  // No grace period — tokens expire exactly at 30 min
+        ClockSkew                = TimeSpan.Zero
     };
 
-    // Read JWT from HttpOnly cookie instead of Authorization header
     options.Events = new JwtBearerEvents
     {
         OnMessageReceived = ctx =>
@@ -58,7 +57,6 @@ builder.Services.AddAuthentication(options =>
 builder.Services.AddAuthorization();
 
 // ─── SERVICES ─────────────────────────────────────────────────────────────────
-builder.Services.AddOpenApi();
 builder.Services.AddSignalR();
 builder.Services.AddControllers();
 builder.Services.AddScoped<YourProject.Services.ReportService>();
@@ -77,14 +75,9 @@ builder.Services.AddCors(options =>
 
 var app = builder.Build();
 
-if (app.Environment.IsDevelopment())
-    app.MapOpenApi();
-
 // ─── MIDDLEWARE PIPELINE ──────────────────────────────────────────────────────
-// Order matters: Routing → CORS → Auth → Authorization → custom middleware
 app.UseCors("AllowNextJS");
-app.UseRouting();
-app.UseAuthentication();   // validates JWT cookie on every request
+app.UseAuthentication();
 app.UseAuthorization();
 app.UseAuditLogging();
 app.UseStaticFiles();
