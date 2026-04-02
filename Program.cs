@@ -68,7 +68,7 @@ builder.Services.AddCors(options =>
 {
     options.AddPolicy("AllowNextJS", policy =>
     {
-        policy.WithOrigins("http://localhost:3000")
+        policy.WithOrigins("http://localhost:3000", "https://axiom-core-steel.vercel.app")
               .AllowAnyMethod()
               .AllowAnyHeader()
               .AllowCredentials();
@@ -82,8 +82,8 @@ if (app.Environment.IsDevelopment())
 
 // ─── MIDDLEWARE PIPELINE ──────────────────────────────────────────────────────
 // Order matters: Routing → CORS → Auth → Authorization → custom middleware
-app.UseRouting();
 app.UseCors("AllowNextJS");
+app.UseRouting();
 app.UseAuthentication();   // validates JWT cookie on every request
 app.UseAuthorization();
 app.UseAuditLogging();
