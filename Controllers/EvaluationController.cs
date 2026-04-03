@@ -39,8 +39,8 @@ namespace YourProject.Controllers
                 if (!string.IsNullOrWhiteSpace(excludeId))
                     query = query.Where(u => u.EmployeeId != excludeId.Trim());
 
-                // Always scope to the same department
-                if (!string.IsNullOrEmpty(deptUpper))
+                // Scope to same department — EXCEPT hr-targets (HR evaluates managers across ALL departments)
+                if (!string.IsNullOrEmpty(deptUpper) && mode?.ToLower() != "hr-targets")
                     query = query.Where(u => u.Department.ToUpper() == deptUpper);
 
                 // Filter by mode — determines WHO is eligible to be evaluated
@@ -72,10 +72,8 @@ namespace YourProject.Controllers
                         break;
 
                     case "hr-targets":
-                        // HR evaluates MANAGER + EMPLOYEE in same department
-                        query = query.Where(u =>
-                            u.Role.ToUpper() == "MANAGER" ||
-                            u.Role.ToUpper() == "EMPLOYEE");
+                        // HR evaluates MANAGERs across ALL departments
+                        query = query.Where(u => u.Role.ToUpper() == "MANAGER");
                         break;
 
                     case "hr-results":
