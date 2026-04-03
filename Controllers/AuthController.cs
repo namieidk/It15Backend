@@ -91,19 +91,12 @@ namespace YourProject.Controllers
             // 6. Issue JWT
             var token = GenerateJwt(user);
 
-            // 7. Set JWT as HttpOnly, Secure, SameSite=Strict cookie
-            Response.Cookies.Append("jwt", token, new CookieOptions
-            {
-                HttpOnly = true,
-                Secure = true,           // HTTPS only — remove only for local dev
-                SameSite = SameSiteMode.None,
-                MaxAge = TimeSpan.FromMinutes(30),
-                Path = "/"
-            });
-
+            // 7. Return token in response body — cookie is set by Next.js API route
+            //    on the same domain to avoid cross-site cookie issues
             return Ok(new
             {
                 message = "Success",
+                token = token,
                 user = new
                 {
                     name = user.Name,
@@ -132,7 +125,6 @@ namespace YourProject.Controllers
         [HttpPost("provision")]
         public async Task<IActionResult> Provision([FromBody] ProvisionModel model)
         {
-            // Verify caller is ADMIN via JWT
             var callerRole = User.FindFirstValue(ClaimTypes.Role);
             if (callerRole?.ToUpper() != "ADMIN")
                 return Forbid();
@@ -171,7 +163,6 @@ namespace YourProject.Controllers
         [HttpPost("register-admin")]
         public async Task<IActionResult> RegisterAdmin([FromBody] RegisterAdminModel model)
         {
-            // Validate the secret key server-side
             var expectedKey = _config["AdminRegistration:SecretKey"];
             if (string.IsNullOrWhiteSpace(expectedKey) || model.SecretKey != expectedKey)
                 return Unauthorized(new { message = "Invalid provisioning key." });
@@ -244,7 +235,6 @@ namespace YourProject.Controllers
             using var doc = JsonDocument.Parse(json);
 
             bool success = doc.RootElement.GetProperty("success").GetBoolean();
-            // For v3 reCAPTCHA, also check score (0.0 - 1.0). 0.5+ is human.
             if (success && doc.RootElement.TryGetProperty("score", out var scoreEl))
             {
                 double score = scoreEl.GetDouble();
