@@ -135,5 +135,88 @@ namespace YourProject.Controllers
                 });
             }
         }
+
+        // ─── 3. MANAGER DASHBOARD STATS ────────────────────────────────────────────
+// GET: api/Dashboard/manager-stats/{employeeId}
+[HttpGet("manager-stats/{employeeId}")]
+public async Task<IActionResult> GetManagerDashboardStats(string employeeId)
+{
+    try
+    {
+        // Get manager's department
+        var manager = await _context.Users
+            .FirstOrDefaultAsync(u => u.EmployeeId == employeeId);
+
+        if (manager == null)
+            return NotFound(new { message = "Manager not found" });
+
+        var dept = manager.Department.ToUpper();
+
+        // 1. Active Headcount in department
+        var activeHeadcount = await _context.Users
+            .CountAsync(u => u.Department.ToUpper() == dept
+                          && u.Status == "ACTIVE"
+                          && u.Role.ToUpper() != "ADMIN");
+
+        // 2. Get employee IDs in this department for leave join
+        var deptEmployeeIds = await _context.Users
+            .Where(u => u.Department.ToUpper() == dept
+                     && u.Role.ToUpper() == "EMPLOYEE"
+                     && u.Status == "ACTIVE")
+            .Select(u => u.EmployeeId)
+            .ToListAsync();
+
+        // 3. Pending Leaves in department (join LeaveReq with Users)
+        var pendingLeaves = await _context.LeaveReq
+            .CountAsync(l => deptEmployeeIds.Contains(l.EmployeeId.ToString())
+                          && l.Status == "PENDING");
+
+        // 4. Team SLA — attendance rate of department employees this month
+        var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+
+        int totalExpected = deptEmployeeIds.Count * DateTime.Now.Day;
+        int totalPresent  = await _context.Attendance
+            .CountAsync(a => deptEmployeeIds.Contains(a.EmployeeId)
+                          && a.Status == "PRESENT"
+                          && a.ClockInTime >= firstDayOfMonth);
+
+        double sla = totalExpected > 0
+            ? Math.Min((double)totalPresent / totalExpected * 100, 100)
+            : 0;
+
+        // 5. Recent pending leave requests in department
+        var pendingApprovals = await _context.LeaveReq
+            .Where(l => deptEmployeeIds.Contains(l.EmployeeId.ToString())
+                     && l.Status == "PENDING")
+            .OrderByDescending(l => l.Id)
+            .Take(5)
+            .Join(
+                _context.Users,
+                l => l.EmployeeId.ToString(),
+                u => u.EmployeeId,
+                (l, u) => new {
+                    name = u.Name.ToUpper(),
+                    type = l.LeaveType.ToUpper(),
+                    date = l.StartDate.ToString("MMM dd") +
+                           (l.EndDate.Date != l.StartDate.Date
+                               ? " - " + l.EndDate.ToString("MMM dd")
+                               : "")
+                }
+            )
+            .ToListAsync();
+
+        return Ok(new
+        {
+            headcount        = activeHeadcount.ToString(),
+            pendingLeaves    = pendingLeaves.ToString(),
+            teamSla          = $"{sla:F1}%",
+            pendingApprovals
+        });
+    }
+    catch (Exception ex)
+    {
+        return StatusCode(500, new { message = "MANAGER_STATS_ERROR", details = ex.Message });
+    }
+}
     }
 }
