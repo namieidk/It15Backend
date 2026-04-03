@@ -96,7 +96,7 @@ namespace YourProject.Controllers
             {
                 HttpOnly = true,
                 Secure = true,           // HTTPS only — remove only for local dev
-                SameSite = SameSiteMode.Strict,
+                SameSite = SameSiteMode.None,
                 MaxAge = TimeSpan.FromMinutes(30),
                 Path = "/"
             });
@@ -122,7 +122,7 @@ namespace YourProject.Controllers
             {
                 HttpOnly = true,
                 Secure = true,
-                SameSite = SameSiteMode.Strict,
+                SameSite = SameSiteMode.None,
                 Path = "/"
             });
             return Ok(new { message = "Logged out" });
