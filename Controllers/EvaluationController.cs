@@ -47,18 +47,42 @@ namespace YourProject.Controllers
                 switch (mode?.ToLower())
                 {
                     case "peer":
-                        // Viewer evaluates people with the same role
-                        query = query.Where(u => u.Role.ToUpper() == roleUpper);
+                        // Employee evaluates other EMPLOYEEs in same department
+                        query = query.Where(u => u.Role.ToUpper() == "EMPLOYEE");
                         break;
 
                     case "managerial":
-                        // Employees evaluate upward — only managers are targets
+                        // Employee evaluates the MANAGER in same department
                         query = query.Where(u => u.Role.ToUpper() == "MANAGER");
                         break;
 
                     case "hr":
-                        // HR compliance — only HR-role users in the same department
+                        // Employee evaluates the HR in same department
                         query = query.Where(u => u.Role.ToUpper() == "HR");
+                        break;
+
+                    case "evaluate":
+                        // Manager evaluates all EMPLOYEEs in same department
+                        query = query.Where(u => u.Role.ToUpper() == "EMPLOYEE");
+                        break;
+
+                    case "results":
+                        // Manager views results of EMPLOYEEs in same department
+                        query = query.Where(u => u.Role.ToUpper() == "EMPLOYEE");
+                        break;
+
+                    case "hr-targets":
+                        // HR evaluates MANAGER + EMPLOYEE in same department
+                        query = query.Where(u =>
+                            u.Role.ToUpper() == "MANAGER" ||
+                            u.Role.ToUpper() == "EMPLOYEE");
+                        break;
+
+                    case "hr-results":
+                        // HR views results of MANAGER + EMPLOYEE in same department
+                        query = query.Where(u =>
+                            u.Role.ToUpper() == "MANAGER" ||
+                            u.Role.ToUpper() == "EMPLOYEE");
                         break;
 
                     default:
