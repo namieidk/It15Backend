@@ -48,7 +48,17 @@ builder.Services.AddAuthentication(options =>
     {
         OnMessageReceived = ctx =>
         {
-            ctx.Token = ctx.Request.Cookies["jwt"];
+            // Try Authorization header first (Bearer token from localStorage)
+            var authHeader = ctx.Request.Headers["Authorization"].ToString();
+            if (!string.IsNullOrEmpty(authHeader) && authHeader.StartsWith("Bearer "))
+            {
+                ctx.Token = authHeader.Substring("Bearer ".Length).Trim();
+            }
+            else
+            {
+                // Fall back to cookie (for Next.js middleware)
+                ctx.Token = ctx.Request.Cookies["jwt"];
+            }
             return Task.CompletedTask;
         }
     };

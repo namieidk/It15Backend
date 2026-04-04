@@ -173,16 +173,6 @@ namespace YourProject.Controllers
             }
         }
 
-        // ─── 7. ACTIVITY LOGS ─────────────────────────────────────────────────
-        // Projection keys match the ActivityLog interface in ActivityLogTable.tsx exactly:
-        //   user      ← AuditLog.ActorName
-        //   role      ← AuditLog.ActorRole
-        //   dept      ← AuditLog.ActorDepartment
-        //   action    ← AuditLog.Action
-        //   module    ← AuditLog.Module
-        //   target    ← AuditLog.Target
-        //   ipAddress ← AuditLog.IpAddress
-        //   timestamp ← AuditLog.Timestamp
         [HttpGet("activity-logs")]
         public async Task<IActionResult> GetActivityLogs(
             [FromQuery] int    page   = 1,
