@@ -33,7 +33,6 @@ namespace YourProject.Controllers
         [HttpPost("login")]
         public async Task<IActionResult> Login([FromBody] LoginModel model)
         {
-            // 1. Verify reCAPTCHA token first
             var captchaValid = await VerifyRecaptcha(model.RecaptchaToken);
             if (!captchaValid)
                 return BadRequest(new { message = "CAPTCHA verification failed. Please try again." });
@@ -45,7 +44,6 @@ namespace YourProject.Controllers
 
             var user = await _context.Users.FirstOrDefaultAsync(u => u.EmployeeId == cleanId);
 
-            // 2. Check lockout before doing anything else
             if (user != null && user.LockoutUntil.HasValue && user.LockoutUntil.Value > DateTime.UtcNow)
             {
                 var remaining = (int)(user.LockoutUntil.Value - DateTime.UtcNow).TotalMinutes + 1;
@@ -53,10 +51,8 @@ namespace YourProject.Controllers
                 return Unauthorized(new { message = $"Account locked. Try again in {remaining} minute(s)." });
             }
 
-            // 3. Verify password — exact match only (no case variants)
             bool isValid = user != null && BCrypt.Net.BCrypt.Verify(attempt, user.PasswordHash);
 
-            // 4. Handle failed attempt
             if (user != null && !isValid)
             {
                 user.FailedLoginAttempts += 1;
@@ -83,16 +79,11 @@ namespace YourProject.Controllers
             }
             if (user.Status == "INACTIVE") return Unauthorized(new { message = "Access Revoked" });
 
-            // 5. Reset failed attempts on success
             user.FailedLoginAttempts = 0;
             user.LockoutUntil = null;
             await _context.SaveChangesAsync();
 
-            // 6. Issue JWT
             var token = GenerateJwt(user);
-
-            // 7. Return token in response body — cookie is set by Next.js API route
-            //    on the same domain to avoid cross-site cookie issues
             return Ok(new
             {
                 message = "Success",

@@ -24,11 +24,6 @@ namespace YourProject.Controllers
                 : null;
         }
 
-        // =====================================================================
-        // ─── HR / EMPLOYEE ENDPOINTS ──────────────────────────────────────────
-        // =====================================================================
-
-        // ─── GET /api/Reports/user-profile ───────────────────────────────────
         [HttpGet("user-profile")]
         public async Task<IActionResult> GetUserProfile()
         {
@@ -51,7 +46,6 @@ namespace YourProject.Controllers
             });
         }
 
-        // ─── GET /api/Reports/my-reports ─────────────────────────────────────
         [HttpGet("my-reports")]
         public async Task<IActionResult> GetMyReports()
         {
@@ -79,8 +73,6 @@ namespace YourProject.Controllers
             return Ok(reports);
         }
 
-        // ─── GET /api/Reports/summary ─────────────────────────────────────────
-        // HR view: summary scoped to the requesting employee only
         [HttpGet("summary")]
         public async Task<IActionResult> GetSummary()
         {
@@ -117,7 +109,6 @@ namespace YourProject.Controllers
             return Ok(summary);
         }
 
-        // ─── GET /api/Reports/download/{id} ──────────────────────────────────
         [HttpGet("download/{id:int}")]
         public async Task<IActionResult> DownloadReport(int id)
         {
@@ -134,21 +125,13 @@ namespace YourProject.Controllers
             return Ok(new { downloadUrl = report.DownloadUrl });
         }
 
-        // =====================================================================
-        // ─── ADMIN-ONLY ENDPOINTS ─────────────────────────────────────────────
-        // =====================================================================
-
-        // ─── GET /api/Reports/admin/stats ────────────────────────────────────
-        // Returns: totalAccounts, storageUsedGB, dbUptimePercent, dataBreaches
         [HttpGet("admin/stats")]
         public async Task<IActionResult> GetAdminStats()
         {
             try
             {
-                // 1. Total Accounts
                 var totalAccounts = await _context.Users.CountAsync();
 
-                // 2. Storage Used — from sys.database_files, falls back to estimate
                 double storageGB = 0;
                 try
                 {
@@ -165,7 +148,6 @@ namespace YourProject.Controllers
                     storageGB = Math.Round(reportCount * 0.0001, 2);
                 }
 
-                // 3. DB Uptime — from sys.dm_os_sys_info, falls back to 99.99
                 double uptimePercent = 99.99;
                 try
                 {
@@ -200,8 +182,6 @@ namespace YourProject.Controllers
             }
         }
 
-        // ─── GET /api/Reports/admin/all-reports ──────────────────────────────
-        // Returns ALL reports org-wide — no employee filter (admin privilege)
         [HttpGet("admin/all-reports")]
         public async Task<IActionResult> GetAllReports()
         {
@@ -231,8 +211,6 @@ namespace YourProject.Controllers
             }
         }
 
-        // ─── GET /api/Reports/admin/summary ──────────────────────────────────
-        // Org-wide summary: byType, byDepartment, byMonth — admin only
         [HttpGet("admin/summary")]
         public async Task<IActionResult> GetOrgSummary()
         {

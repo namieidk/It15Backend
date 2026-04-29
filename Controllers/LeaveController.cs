@@ -16,10 +16,6 @@ namespace YourProjectName.Controllers
             _context = context;
         }
 
-        // ==========================================
-        // MANAGER ENDPOINTS
-        // ==========================================
-
         [HttpGet("pending")]
         public async Task<IActionResult> GetPendingRequests()
         {

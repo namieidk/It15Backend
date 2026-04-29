@@ -25,13 +25,15 @@ namespace YourProject.Controllers
             [FromQuery] string department,
             [FromQuery] string excludeId,
             [FromQuery] string viewerRole,
-            [FromQuery] string mode)
+            [FromQuery] string mode,
+            [FromQuery] int    cycleMonths = 3)   // default 3-month cycle
         {
             try
             {
-                var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
-                var deptUpper       = department?.Trim().ToUpper() ?? "";
-                var roleUpper       = viewerRole?.Trim().ToUpper() ?? "";
+                // Use cycleMonths to determine the start of the current evaluation window
+                var cycleStart  = DateTime.Now.AddMonths(-cycleMonths);
+                var deptUpper   = department?.Trim().ToUpper() ?? "";
+                var roleUpper   = viewerRole?.Trim().ToUpper() ?? "";
 
                 var query = _context.Users.Where(u => u.Role.ToUpper() != "ADMIN");
 
@@ -39,45 +41,38 @@ namespace YourProject.Controllers
                 if (!string.IsNullOrWhiteSpace(excludeId))
                     query = query.Where(u => u.EmployeeId != excludeId.Trim());
 
-                // Scope to same department — EXCEPT hr-targets (HR evaluates managers across ALL departments)
+                // Scope to same department — EXCEPT hr-targets
                 if (!string.IsNullOrEmpty(deptUpper) && mode?.ToLower() != "hr-targets")
                     query = query.Where(u => u.Department.ToUpper() == deptUpper);
 
-                // Filter by mode — determines WHO is eligible to be evaluated
+                // Filter by mode
                 switch (mode?.ToLower())
                 {
                     case "peer":
-                        // Employee evaluates other EMPLOYEEs in same department
                         query = query.Where(u => u.Role.ToUpper() == "EMPLOYEE");
                         break;
 
                     case "managerial":
-                        // Employee evaluates the MANAGER in same department
                         query = query.Where(u => u.Role.ToUpper() == "MANAGER");
                         break;
 
                     case "hr":
-                        // Employee evaluates the HR in same department
                         query = query.Where(u => u.Role.ToUpper() == "HR");
                         break;
 
                     case "evaluate":
-                        // Manager evaluates all EMPLOYEEs in same department
                         query = query.Where(u => u.Role.ToUpper() == "EMPLOYEE");
                         break;
 
                     case "results":
-                        // Manager views results of EMPLOYEEs in same department
                         query = query.Where(u => u.Role.ToUpper() == "EMPLOYEE");
                         break;
 
                     case "hr-targets":
-                        // HR evaluates MANAGERs across ALL departments
                         query = query.Where(u => u.Role.ToUpper() == "MANAGER");
                         break;
 
                     case "hr-results":
-                        // HR views results of MANAGER + EMPLOYEE in same department
                         query = query.Where(u =>
                             u.Role.ToUpper() == "MANAGER" ||
                             u.Role.ToUpper() == "EMPLOYEE");
@@ -93,10 +88,11 @@ namespace YourProject.Controllers
                         name       = u.Name.ToUpper(),
                         role       = u.Role.ToUpper(),
                         department = u.Department.ToUpper(),
+                        // Block re-evaluation if already submitted within the 3-month window
                         alreadyEvaluated = _context.Evaluations.Any(e =>
                             e.EvaluatorId.ToString()      == excludeId &&
                             e.TargetEmployeeId.ToString() == u.EmployeeId &&
-                            e.DateSubmitted >= firstDayOfMonth),
+                            e.DateSubmitted               >= cycleStart),
                         peerScoreValue = _context.Evaluations
                             .Where(e => e.TargetEmployeeId.ToString() == u.EmployeeId)
                             .Select(e => (double?)e.Score)
@@ -153,15 +149,18 @@ namespace YourProject.Controllers
         {
             try
             {
-                var firstDayOfMonth = new DateTime(DateTime.Now.Year, DateTime.Now.Month, 1);
+                // Use cycleMonths from the request body (default 3 if not provided)
+                var cycleMonths = model.CycleMonths > 0 ? model.CycleMonths : 3;
+                var cycleStart  = DateTime.Now.AddMonths(-cycleMonths);
 
+                // Check if already evaluated within the current 3-month window
                 bool exists = await _context.Evaluations.AnyAsync(e =>
                     e.EvaluatorId.ToString()      == model.EvaluatorId &&
                     e.TargetEmployeeId.ToString() == model.TargetEmployeeId &&
-                    e.DateSubmitted >= firstDayOfMonth);
+                    e.DateSubmitted               >= cycleStart);
 
                 if (exists)
-                    return BadRequest(new { message = "Monthly limit reached for this target." });
+                    return BadRequest(new { message = "Quarterly limit reached for this target." });
 
                 var evaluation = new Evaluation
                 {
@@ -204,5 +203,6 @@ namespace YourProject.Controllers
         public string  EvaluatorId      { get; set; } = string.Empty;
         public double  Score            { get; set; }
         public string? Comments         { get; set; }
+        public int     CycleMonths      { get; set; } = 3;   // new — defaults to 3
     }
 }
